@@ -41,7 +41,7 @@ jobs:
             python3-jinja2 \
             libegl1-mesa \
             libsdl1.2-dev \
-            pylint3 \
+            pylint \
             xterm \
             zstd \
             liblz4-tool \
