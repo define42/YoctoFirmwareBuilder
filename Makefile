@@ -177,55 +177,54 @@ recipes: configure
 	@mkdir -p $(LAYER_PATH)/recipes-core/images
 	@mkdir -p $(LAYER_PATH)/recipes-core/bundles
 	@mkdir -p $(LAYER_PATH)/recipes-core/rauc/files
+	@printf '%s\n' \
+		'DESCRIPTION = "Custom embedded Linux image for x86 with RAUC"' \
+		'LICENSE = "MIT"' \
+		'' \
+		'inherit core-image' \
+		'' \
+		'IMAGE_INSTALL:append = " \' \
+		'    packagegroup-core-boot \' \
+		'    openssh \' \
+		'    rauc \' \
+		'"' \
+		'' \
+		'IMAGE_FEATURES += "ssh-server-openssh"' \
+		'IMAGE_FSTYPES += " wic wic.bmap ext4"' \
+		> $(LAYER_PATH)/recipes-core/images/$(IMAGE_NAME).bb
 
-	@cat > $(LAYER_PATH)/recipes-core/images/$(IMAGE_NAME).bb <<EOF
-DESCRIPTION = "Custom embedded Linux image for x86 with RAUC"
-LICENSE = "MIT"
+	@printf '%s\n' \
+		'DESCRIPTION = "RAUC update bundle for myproduct x86"' \
+		'LICENSE = "MIT"' \
+		'' \
+		'inherit bundle' \
+		'' \
+		'RAUC_BUNDLE_COMPATIBLE = "$(COMPATIBLE_NAME)"' \
+		'RAUC_BUNDLE_FORMAT = "verity"' \
+		'RAUC_BUNDLE_SLOTS = "rootfs"' \
+		'' \
+		'RAUC_SLOT_rootfs = "$(IMAGE_NAME)"' \
+		'RAUC_SLOT_rootfs[fstype] = "ext4"' \
+		> $(LAYER_PATH)/recipes-core/bundles/$(BUNDLE_NAME).bb
 
-inherit core-image
-
-IMAGE_INSTALL:append = " \
-    packagegroup-core-boot \
-    openssh \
-    rauc \
-"
-
-IMAGE_FEATURES += "ssh-server-openssh"
-IMAGE_FSTYPES += " wic wic.bmap ext4"
-EOF
-
-	@cat > $(LAYER_PATH)/recipes-core/bundles/$(BUNDLE_NAME).bb <<EOF
-DESCRIPTION = "RAUC update bundle for myproduct x86"
-LICENSE = "MIT"
-
-inherit bundle
-
-RAUC_BUNDLE_COMPATIBLE = "$(COMPATIBLE_NAME)"
-RAUC_BUNDLE_FORMAT = "verity"
-RAUC_BUNDLE_SLOTS = "rootfs"
-
-RAUC_SLOT_rootfs = "$(IMAGE_NAME)"
-RAUC_SLOT_rootfs[fstype] = "ext4"
-EOF
-
-	@cat > $(LAYER_PATH)/recipes-core/rauc/files/system.conf <<EOF
-[system]
-compatible=$(COMPATIBLE_NAME)
-bootloader=grub
-
-[keyring]
-path=/etc/rauc/ca.cert.pem
-
-[slot.rootfs.0]
-device=/dev/sda2
-type=ext4
-bootname=A
-
-[slot.rootfs.1]
-device=/dev/sda3
-type=ext4
-bootname=B
-EOF
+	@printf '%s\n' \
+		'[system]' \
+		'compatible=$(COMPATIBLE_NAME)' \
+		'bootloader=grub' \
+		'' \
+		'[keyring]' \
+		'path=/etc/rauc/ca.cert.pem' \
+		'' \
+		'[slot.rootfs.0]' \
+		'device=/dev/sda2' \
+		'type=ext4' \
+		'bootname=A' \
+		'' \
+		'[slot.rootfs.1]' \
+		'device=/dev/sda3' \
+		'type=ext4' \
+		'bootname=B' \
+		> $(LAYER_PATH)/recipes-core/rauc/files/system.conf
 
 	@echo "Generated recipes in $(LAYER_PATH)"
 
