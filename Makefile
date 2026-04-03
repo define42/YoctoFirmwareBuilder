@@ -21,8 +21,10 @@
 SHELL := /bin/bash
 
 # ---------- Repos ----------
-POKY_REPO        ?= git://git.yoctoproject.org/poky
+POKY_REPO        ?= https://github.com/yoctoproject/poky.git
+POKY_BRANCH      ?= scarthgap
 META_RAUC_REPO   ?= https://github.com/rauc/meta-rauc.git
+META_RAUC_BRANCH ?= scarthgap
 
 # ---------- Paths ----------
 YOCTO_DIR        ?= poky
@@ -81,7 +83,9 @@ help:
 
 showvars:
 	@echo "POKY_REPO        = $(POKY_REPO)"
+	@echo "POKY_BRANCH      = $(POKY_BRANCH)"
 	@echo "META_RAUC_REPO   = $(META_RAUC_REPO)"
+	@echo "META_RAUC_BRANCH = $(META_RAUC_BRANCH)"
 	@echo "YOCTO_DIR        = $(YOCTO_DIR)"
 	@echo "META_RAUC_DIR    = $(META_RAUC_DIR)"
 	@echo "BUILD_DIR        = $(BUILD_DIR)"
@@ -107,7 +111,7 @@ deps: clone-poky clone-meta-rauc
 clone-poky:
 	@if [ ! -d "$(YOCTO_DIR)" ]; then \
 		echo "Cloning poky into $(YOCTO_DIR)"; \
-		git clone "$(POKY_REPO)" "$(YOCTO_DIR)"; \
+		git clone --branch "$(POKY_BRANCH)" --single-branch "$(POKY_REPO)" "$(YOCTO_DIR)"; \
 	else \
 		echo "Found $(YOCTO_DIR)"; \
 	fi
@@ -115,7 +119,7 @@ clone-poky:
 clone-meta-rauc:
 	@if [ ! -d "$(META_RAUC_DIR)" ]; then \
 		echo "Cloning meta-rauc into $(META_RAUC_DIR)"; \
-		git clone "$(META_RAUC_REPO)" "$(META_RAUC_DIR)"; \
+		git clone --branch "$(META_RAUC_BRANCH)" --single-branch "$(META_RAUC_REPO)" "$(META_RAUC_DIR)"; \
 	else \
 		echo "Found $(META_RAUC_DIR)"; \
 	fi
