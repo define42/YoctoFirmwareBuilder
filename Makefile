@@ -21,8 +21,10 @@
 SHELL := /bin/bash
 
 # ---------- Repos ----------
-POKY_REPO        ?= git://git.yoctoproject.org/poky
+POKY_REPO        ?= https://github.com/yoctoproject/poky.git
+POKY_BRANCH      ?= scarthgap
 META_RAUC_REPO   ?= https://github.com/rauc/meta-rauc.git
+META_RAUC_BRANCH ?= scarthgap
 
 # ---------- Paths ----------
 YOCTO_DIR        ?= poky
@@ -81,7 +83,9 @@ help:
 
 showvars:
 	@echo "POKY_REPO        = $(POKY_REPO)"
+	@echo "POKY_BRANCH      = $(POKY_BRANCH)"
 	@echo "META_RAUC_REPO   = $(META_RAUC_REPO)"
+	@echo "META_RAUC_BRANCH = $(META_RAUC_BRANCH)"
 	@echo "YOCTO_DIR        = $(YOCTO_DIR)"
 	@echo "META_RAUC_DIR    = $(META_RAUC_DIR)"
 	@echo "BUILD_DIR        = $(BUILD_DIR)"
@@ -107,7 +111,7 @@ deps: clone-poky clone-meta-rauc
 clone-poky:
 	@if [ ! -d "$(YOCTO_DIR)" ]; then \
 		echo "Cloning poky into $(YOCTO_DIR)"; \
-		git clone "$(POKY_REPO)" "$(YOCTO_DIR)"; \
+		git clone --branch "$(POKY_BRANCH)" "$(POKY_REPO)" "$(YOCTO_DIR)"; \
 	else \
 		echo "Found $(YOCTO_DIR)"; \
 	fi
@@ -115,7 +119,7 @@ clone-poky:
 clone-meta-rauc:
 	@if [ ! -d "$(META_RAUC_DIR)" ]; then \
 		echo "Cloning meta-rauc into $(META_RAUC_DIR)"; \
-		git clone "$(META_RAUC_REPO)" "$(META_RAUC_DIR)"; \
+		git clone --branch "$(META_RAUC_BRANCH)" "$(META_RAUC_REPO)" "$(META_RAUC_DIR)"; \
 	else \
 		echo "Found $(META_RAUC_DIR)"; \
 	fi
@@ -177,55 +181,54 @@ recipes: configure
 	@mkdir -p $(LAYER_PATH)/recipes-core/images
 	@mkdir -p $(LAYER_PATH)/recipes-core/bundles
 	@mkdir -p $(LAYER_PATH)/recipes-core/rauc/files
+	@printf '%s\n' \
+		'DESCRIPTION = "Custom embedded Linux image for x86 with RAUC"' \
+		'LICENSE = "MIT"' \
+		'' \
+		'inherit core-image' \
+		'' \
+		'IMAGE_INSTALL:append = " \' \
+		'    packagegroup-core-boot \' \
+		'    openssh \' \
+		'    rauc \' \
+		'"' \
+		'' \
+		'IMAGE_FEATURES += "ssh-server-openssh"' \
+		'IMAGE_FSTYPES += " wic wic.bmap ext4"' \
+		> $(LAYER_PATH)/recipes-core/images/$(IMAGE_NAME).bb
 
-	@cat > $(LAYER_PATH)/recipes-core/images/$(IMAGE_NAME).bb <<EOF
-DESCRIPTION = "Custom embedded Linux image for x86 with RAUC"
-LICENSE = "MIT"
+	@printf '%s\n' \
+		'DESCRIPTION = "RAUC update bundle for myproduct x86"' \
+		'LICENSE = "MIT"' \
+		'' \
+		'inherit bundle' \
+		'' \
+		'RAUC_BUNDLE_COMPATIBLE = "$(COMPATIBLE_NAME)"' \
+		'RAUC_BUNDLE_FORMAT = "verity"' \
+		'RAUC_BUNDLE_SLOTS = "rootfs"' \
+		'' \
+		'RAUC_SLOT_rootfs = "$(IMAGE_NAME)"' \
+		'RAUC_SLOT_rootfs[fstype] = "ext4"' \
+		> $(LAYER_PATH)/recipes-core/bundles/$(BUNDLE_NAME).bb
 
-inherit core-image
-
-IMAGE_INSTALL:append = " \
-    packagegroup-core-boot \
-    openssh \
-    rauc \
-"
-
-IMAGE_FEATURES += "ssh-server-openssh"
-IMAGE_FSTYPES += " wic wic.bmap ext4"
-EOF
-
-	@cat > $(LAYER_PATH)/recipes-core/bundles/$(BUNDLE_NAME).bb <<EOF
-DESCRIPTION = "RAUC update bundle for myproduct x86"
-LICENSE = "MIT"
-
-inherit bundle
-
-RAUC_BUNDLE_COMPATIBLE = "$(COMPATIBLE_NAME)"
-RAUC_BUNDLE_FORMAT = "verity"
-RAUC_BUNDLE_SLOTS = "rootfs"
-
-RAUC_SLOT_rootfs = "$(IMAGE_NAME)"
-RAUC_SLOT_rootfs[fstype] = "ext4"
-EOF
-
-	@cat > $(LAYER_PATH)/recipes-core/rauc/files/system.conf <<EOF
-[system]
-compatible=$(COMPATIBLE_NAME)
-bootloader=grub
-
-[keyring]
-path=/etc/rauc/ca.cert.pem
-
-[slot.rootfs.0]
-device=/dev/sda2
-type=ext4
-bootname=A
-
-[slot.rootfs.1]
-device=/dev/sda3
-type=ext4
-bootname=B
-EOF
+	@printf '%s\n' \
+		'[system]' \
+		'compatible=$(COMPATIBLE_NAME)' \
+		'bootloader=grub' \
+		'' \
+		'[keyring]' \
+		'path=/etc/rauc/ca.cert.pem' \
+		'' \
+		'[slot.rootfs.0]' \
+		'device=/dev/sda2' \
+		'type=ext4' \
+		'bootname=A' \
+		'' \
+		'[slot.rootfs.1]' \
+		'device=/dev/sda3' \
+		'type=ext4' \
+		'bootname=B' \
+		> $(LAYER_PATH)/recipes-core/rauc/files/system.conf
 
 	@echo "Generated recipes in $(LAYER_PATH)"
 

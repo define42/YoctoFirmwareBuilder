@@ -1,0 +1,67 @@
+name: Build firmware
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    permissions:
+      contents: read
+    runs-on: ubuntu-22.04
+    timeout-minutes: 180
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Yocto build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            gawk \
+            wget \
+            git \
+            diffstat \
+            unzip \
+            texinfo \
+            gcc \
+            build-essential \
+            chrpath \
+            socat \
+            cpio \
+            python3 \
+            python3-pip \
+            python3-pexpect \
+            xz-utils \
+            debianutils \
+            iputils-ping \
+            python3-git \
+            python3-jinja2 \
+            libegl1-mesa \
+            libsdl1.2-dev \
+            pylint \
+            xterm \
+            zstd \
+            liblz4-tool \
+            file \
+            locales
+          sudo locale-gen en_US.UTF-8
+
+      - name: Build with make
+        env:
+          LANG: en_US.UTF-8
+          LC_ALL: en_US.UTF-8
+        run: make all
+
+      - name: Show generated .wic and .raucb files
+        shell: bash
+        run: |
+          shopt -s globstar nullglob
+          files=(build/tmp/deploy/images/**/*.wic build/tmp/deploy/images/**/*.raucb)
+          if [ ${#files[@]} -eq 0 ]; then
+            echo "No .wic or .raucb files found."
+            exit 1
+          fi
+          ls -la "${files[@]}"
