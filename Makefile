@@ -111,7 +111,7 @@ deps: clone-poky clone-meta-rauc
 clone-poky:
 	@if [ ! -d "$(YOCTO_DIR)" ]; then \
 		echo "Cloning poky into $(YOCTO_DIR)"; \
-		git clone --branch "$(POKY_BRANCH)" --single-branch "$(POKY_REPO)" "$(YOCTO_DIR)"; \
+		git clone --branch "$(POKY_BRANCH)" "$(POKY_REPO)" "$(YOCTO_DIR)"; \
 	else \
 		echo "Found $(YOCTO_DIR)"; \
 	fi
@@ -119,7 +119,7 @@ clone-poky:
 clone-meta-rauc:
 	@if [ ! -d "$(META_RAUC_DIR)" ]; then \
 		echo "Cloning meta-rauc into $(META_RAUC_DIR)"; \
-		git clone --branch "$(META_RAUC_BRANCH)" --single-branch "$(META_RAUC_REPO)" "$(META_RAUC_DIR)"; \
+		git clone --branch "$(META_RAUC_BRANCH)" "$(META_RAUC_REPO)" "$(META_RAUC_DIR)"; \
 	else \
 		echo "Found $(META_RAUC_DIR)"; \
 	fi
