@@ -32,7 +32,7 @@ BUILD_DIR        ?= build
 META_RAUC_DIR    ?= meta-rauc
 
 LAYER_NAME       ?= meta-myproduct
-LAYER_PATH       ?= ../$(LAYER_NAME)
+LAYER_PATH       ?= $(CURDIR)/$(LAYER_NAME)
 
 # ---------- Build settings ----------
 MACHINE          ?= genericx86-64
@@ -147,33 +147,34 @@ add-layer: layer
 
 configure: add-layer
 	@bash -lc '\
+		set -e; \
 		$(YOCTO_ENV) >/dev/null; \
 		conf="conf/local.conf"; \
-		python3 - "$$conf" "$(MACHINE)" "$(BB_THREADS)" "$(PARALLEL_MAKE)" "$(RAUC_CERT_FILE)" "$(RAUC_KEY_FILE)" << "PY" \
-import sys, re, pathlib \
-conf = pathlib.Path(sys.argv[1]) \
-machine = sys.argv[2] \
-bb_threads = sys.argv[3] \
-parallel_make = sys.argv[4] \
-cert_file = sys.argv[5] \
-key_file = sys.argv[6] \
-text = conf.read_text() \
-def setvar(name, value): \
-    global text \
-    pattern = rf"^#?\s*{name}\s*[?+:]?=.*$$" \
-    repl = f'{name} = "{value}"' \
-    if re.search(pattern, text, flags=re.M): \
-        text = re.sub(pattern, repl, text, flags=re.M) \
-    else: \
-        text += f"\\n{repl}\\n" \
-setvar("MACHINE", machine) \
-setvar("BB_NUMBER_THREADS", bb_threads) \
-setvar("PARALLEL_MAKE", parallel_make) \
-setvar("IMAGE_FSTYPES", "wic wic.bmap ext4") \
-setvar("RAUC_KEY_FILE", key_file) \
-setvar("RAUC_CERT_FILE", cert_file) \
-conf.write_text(text) \
-PY \
+		printf "%s\n" \
+			"import sys, re, pathlib" \
+			"conf = pathlib.Path(sys.argv[1])" \
+			"machine = sys.argv[2]" \
+			"bb_threads = sys.argv[3]" \
+			"parallel_make = sys.argv[4]" \
+			"cert_file = sys.argv[5]" \
+			"key_file = sys.argv[6]" \
+			"text = conf.read_text()" \
+			"def setvar(name, value):" \
+			"    global text" \
+			"    pattern = rf\"^#?\\s*{name}\\s*[?+:]?=.*$$\"" \
+			"    repl = f\"{name} = \\\"{value}\\\"\"" \
+			"    if re.search(pattern, text, flags=re.M):" \
+			"        text = re.sub(pattern, repl, text, flags=re.M)" \
+			"    else:" \
+			"        text += f\"\\n{repl}\\n\"" \
+			"setvar(\"MACHINE\", machine)" \
+			"setvar(\"BB_NUMBER_THREADS\", bb_threads)" \
+			"setvar(\"PARALLEL_MAKE\", parallel_make)" \
+			"setvar(\"IMAGE_FSTYPES\", \"wic wic.bmap ext4\")" \
+			"setvar(\"RAUC_KEY_FILE\", key_file)" \
+			"setvar(\"RAUC_CERT_FILE\", cert_file)" \
+			"conf.write_text(text)" \
+		| python3 - "$$conf" "$(MACHINE)" "$(BB_THREADS)" "$(PARALLEL_MAKE)" "$(RAUC_CERT_FILE)" "$(RAUC_KEY_FILE)"; \
 		echo "Configured $$conf"; \
 	'
 
