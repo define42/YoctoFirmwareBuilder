@@ -36,7 +36,7 @@ LAYER_PATH       ?= $(CURDIR)/$(LAYER_NAME)
 
 # ---------- Build settings ----------
 MACHINE          ?= genericx86-64
-IMAGE_NAME       ?= myproduct-image
+IMAGE_NAME       ?= core-image-minimal
 BUNDLE_NAME      ?= myproduct-bundle
 COMPATIBLE_NAME  ?= myproduct-x86
 
@@ -158,45 +158,46 @@ configure: add-layer
 			"parallel_make = sys.argv[4]" \
 			"cert_file = sys.argv[5]" \
 			"key_file = sys.argv[6]" \
-			"text = conf.read_text()" \
+			"lines = conf.read_text().splitlines()" \
+			"def remove_assignments(name):" \
+			"    global lines" \
+			"    pattern = re.compile(rf\"^\\s*{re.escape(name)}\\s*(?:\\?\\?=|\\?=|\\+=|=).*$$\")" \
+			"    lines = [line for line in lines if not pattern.match(line)]" \
 			"def setvar(name, value):" \
-			"    global text" \
-			"    pattern = rf\"^#?\\s*{name}\\s*[?+:]?=.*$$\"" \
-			"    repl = f\"{name} = \\\"{value}\\\"\"" \
-			"    if re.search(pattern, text, flags=re.M):" \
-			"        text = re.sub(pattern, repl, text, flags=re.M)" \
-			"    else:" \
-			"        text += f\"\\n{repl}\\n\"" \
+			"    remove_assignments(name)" \
+			"    lines.append(f\"{name} = \\\"{value}\\\"\")" \
+			"def has_distro_feature(feature):" \
+			"    pattern = re.compile(r\"^\\s*DISTRO_FEATURES(?::[^\\s=]+)?\\s*(?:\\?\\?=|\\?=|\\+=|=).*$$\")" \
+			"    return any(pattern.match(line) and re.search(rf\"\\b{re.escape(feature)}\\b\", line) for line in lines)" \
 			"setvar(\"MACHINE\", machine)" \
 			"setvar(\"BB_NUMBER_THREADS\", bb_threads)" \
 			"setvar(\"PARALLEL_MAKE\", parallel_make)" \
 			"setvar(\"IMAGE_FSTYPES\", \"wic wic.bmap ext4\")" \
 			"setvar(\"RAUC_KEY_FILE\", key_file)" \
 			"setvar(\"RAUC_CERT_FILE\", cert_file)" \
-			"conf.write_text(text)" \
+			"if not has_distro_feature(\"rauc\"):" \
+			"    lines.append(\"DISTRO_FEATURES:append = \\\" rauc\\\"\")" \
+			"conf.write_text(\"\\n\".join(lines) + \"\\n\")" \
 		| python3 - "$$conf" "$(MACHINE)" "$(BB_THREADS)" "$(PARALLEL_MAKE)" "$(RAUC_CERT_FILE)" "$(RAUC_KEY_FILE)"; \
 		echo "Configured $$conf"; \
 	'
 
-recipes: configure
+recipes: configure keys
 	@mkdir -p $(LAYER_PATH)/recipes-core/images
 	@mkdir -p $(LAYER_PATH)/recipes-core/bundles
 	@mkdir -p $(LAYER_PATH)/recipes-core/rauc/files
+	@rm -f $(LAYER_PATH)/recipes-core/images/$(IMAGE_NAME).bb
+	@rm -f $(LAYER_PATH)/recipes-core/images/myproduct-image.bb
 	@printf '%s\n' \
-		'DESCRIPTION = "Custom embedded Linux image for x86 with RAUC"' \
-		'LICENSE = "MIT"' \
-		'' \
-		'inherit core-image' \
-		'' \
-		'IMAGE_INSTALL:append = " \' \
-		'    packagegroup-core-boot \' \
-		'    openssh \' \
-		'    rauc \' \
-		'"' \
-		'' \
-		'IMAGE_FEATURES += "ssh-server-openssh"' \
-		'IMAGE_FSTYPES += " wic wic.bmap ext4"' \
-		> $(LAYER_PATH)/recipes-core/images/$(IMAGE_NAME).bb
+		'IMAGE_INSTALL:append = " rauc rauc-conf"' \
+		'IMAGE_FEATURES:remove = "ssh-server-openssh"' \
+		> $(LAYER_PATH)/recipes-core/images/$(IMAGE_NAME).bbappend
+
+	@printf '%s\n' \
+		'FILESEXTRAPATHS:prepend := "$${THISDIR}/files:"' \
+		> $(LAYER_PATH)/recipes-core/rauc/rauc-conf.bbappend
+
+	@install -m 0644 "$(RAUC_CERT_FILE)" "$(LAYER_PATH)/recipes-core/rauc/files/ca.cert.pem"
 
 	@printf '%s\n' \
 		'DESCRIPTION = "RAUC update bundle for myproduct x86"' \
@@ -246,7 +247,7 @@ keys:
 		echo "Found existing RAUC keys"; \
 	fi
 
-image: recipes keys
+image: recipes
 	@bash -lc '$(YOCTO_ENV) >/dev/null && bitbake $(IMAGE_NAME)'
 
 bundle: image
