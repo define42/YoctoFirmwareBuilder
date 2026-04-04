@@ -61,7 +61,8 @@ YOCTO_ENV        = source $(YOCTO_DIR)/oe-init-build-env $(BUILD_DIR)
 DEPLOY_DIR       = $(BUILD_DIR)/tmp/deploy/images/$(MACHINE)
 
 .PHONY: help deps clone-poky clone-meta-rauc init layer add-layer configure \
-        recipes keys image bundle all qemu outputs clean distclean showvars
+        recipes keys image bundle all qemu outputs clean distclean clobber \
+        superclean showvars
 
 help:
 	@echo "Targets:"
@@ -79,6 +80,8 @@ help:
 	@echo "  make outputs     - show generated output files"
 	@echo "  make clean       - clean BitBake outputs"
 	@echo "  make distclean   - remove build dir, layer, keys"
+	@echo "  make clobber     - remove build dir, layer, keys, poky, meta-rauc"
+	@echo "  make superclean  - alias for clobber"
 	@echo "  make showvars    - show current settings"
 
 showvars:
@@ -295,3 +298,9 @@ distclean:
 	@rm -rf "$(BUILD_DIR)" "$(LAYER_PATH)" keys
 	@echo "Removed build dir, generated layer, and keys"
 	@echo "Kept $(YOCTO_DIR) and $(META_RAUC_DIR)"
+
+clobber: distclean
+	@rm -rf "$(YOCTO_DIR)" "$(META_RAUC_DIR)"
+	@echo "Removed $(YOCTO_DIR) and $(META_RAUC_DIR)"
+
+superclean: clobber
